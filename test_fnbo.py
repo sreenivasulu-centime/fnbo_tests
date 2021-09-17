@@ -19,7 +19,7 @@ def get_supplier_data():
 
 
 def updated_config(vendor_name, account_number, routing_number,payee_client_id):
-    sample_curl = """curl --location --request POST 'https://internal.ds.services.dev.centime.com/payments-data-service/1.0/bank-accounts/' --header 'clientid: 1' --header 'loginid: admin@centime.com' --header 'Content-Type: application/json' --data-raw '{"clientId": "client_id",
+    sample_curl = """curl --location --request POST 'https://internal.ds.services.stg.centime.com/payments-data-service/1.0/bank-accounts/' --header 'clientid: 1' --header 'loginid: admin@centime.com' --header 'Content-Type: application/json' --data-raw '{"clientId": "client_id",
     "clientType": "SUPPLIER",
     "accountNumber": "account_number",
     "routingNumber": "routing_number",
@@ -64,7 +64,7 @@ def trigger_pay_api(source_account, amount, payee_uid, payee_cient_id, payment_d
         "paymentDesc": "excel_payment_description",
         "paymentStartDate": "2021-09-17 23:22:38"
     }
-    curl_command = f"curl --location --request POST 'https://internal.fs.services.dev.centime.com/payments-processing" \
+    curl_command = f"curl --location --request POST 'https://internal.fs.services.stg.centime.com/payments-processing" \
                    f"-service/1.0/payments/pay/CENTIME_CREDIT?isDrawCash=false' --header 'clientid: 2' --header " \
                    f"'loginid: admin@centime.com' --header 'Content-Type: application/json' --data-raw '" \
                    f"{json.dumps(sample_dict)}' "
