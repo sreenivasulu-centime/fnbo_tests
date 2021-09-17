@@ -45,8 +45,8 @@ def get_account_uid(vendor_name, account_number, routing_number,payee_client_id)
 
 def trigger_pay_api(source_account, amount, payee_uid, payee_cient_id, payment_description):
     sample_dict = {
-        "amount": 10,
-        "currencycode": "USD",
+        "amount": "excel_amount",
+        "currencyCode": "USD",
         "payeeDetails": {
             "bankDetails": {
                 "uid": "excel_payee_uid",
@@ -61,7 +61,7 @@ def trigger_pay_api(source_account, amount, payee_uid, payee_cient_id, payment_d
             },
             "id": "payer_client_id"
         },
-        "paymentdesc": "excel_payment_description",
+        "paymentDesc": "excel_payment_description",
         "paymentStartDate": "2021-09-17 23:22:38"
     }
     curl_command = f"curl --location --request POST 'https://internal.fs.services.dev.centime.com/payments-processing" \
