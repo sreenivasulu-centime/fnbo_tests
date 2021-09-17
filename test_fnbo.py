@@ -18,8 +18,8 @@ def get_supplier_data():
     return supplier_details
 
 
-def updated_config(vendor_name, account_number, routing_number):
-    sample_curl = """curl --location --request POST 'https://internal.ds.services.dev.centime.com/payments-data-service/1.0/bank-accounts/' --header 'clientid: 1' --header 'loginid: admin@centime.com' --header 'Content-Type: application/json' --data-raw '{"clientId": "222",
+def updated_config(vendor_name, account_number, routing_number,payee_client_id):
+    sample_curl = """curl --location --request POST 'https://internal.ds.services.dev.centime.com/payments-data-service/1.0/bank-accounts/' --header 'clientid: 1' --header 'loginid: admin@centime.com' --header 'Content-Type: application/json' --data-raw '{"clientId": "client_id",
     "clientType": "SUPPLIER",
     "accountNumber": "account_number",
     "routingNumber": "routing_number",
@@ -27,15 +27,15 @@ def updated_config(vendor_name, account_number, routing_number):
     "accountType": "CHECKING",
     "accountProductType": "DDA",
     "currencyCode": "USD"}'"""
-    updated_curl = sample_curl.replace('account_number', str(account_number)).replace('routing_number',
+    updated_curl = sample_curl.replace('client_id',str(payee_client_id)).replace('account_number', str(account_number)).replace('routing_number',
                                                                                       str(routing_number)).replace(
         'vendor_name', vendor_name)
     return updated_curl
 
 
-def get_account_uid(vendor_name, account_number, routing_number):
+def get_account_uid(vendor_name, account_number, routing_number,payee_client_id):
     # response = os.system(f"{config['supplier_details']['curl_command']} > result.json")
-    curl = updated_config(vendor_name, account_number, routing_number)
+    curl = updated_config(vendor_name, account_number, routing_number, payee_client_id)
     response = os.system(f'{curl} > result.json')
     response = json.load(open("result.json"))
     print(response)
@@ -62,7 +62,7 @@ def trigger_pay_api(source_account, amount, payee_uid, payee_cient_id, payment_d
             "id": "payer_client_id"
         },
         "paymentdesc": "excel_payment_description",
-        "paymentStartDate": "2021-09-15 14:22:38"
+        "paymentStartDate": "2021-09-17 23:22:38"
     }
     curl_command = f"curl --location --request POST 'https://internal.fs.services.dev.centime.com/payments-processing" \
                    f"-service/1.0/payments/pay/CENTIME_CREDIT?isDrawCash=false' --header 'clientid: 2' --header " \
@@ -80,20 +80,27 @@ def trigger_pay_api(source_account, amount, payee_uid, payee_cient_id, payment_d
         replace('excel_payee_id', str(payee_cient_id)).replace('excel_payer_uid', str(payer_uid[source_account])). \
         replace('payer_client_id', str(payer_client_id[source_account])).replace('excel_payment_description',
                                                                                  payment_description)
+    with open('request_response.txt','a+') as file:
+        file.write(f"request: {updated_curl_command} \n")
+        file.close()
+
     response = os.system(f'{updated_curl_command} > result.json')
     response = json.load(open("result.json"))
+    with open('request_response.txt','a+') as file:
+        file.write(f"request: {response} \n")
+        file.close()
     return response
 
 
 def setup_supp_data():
     payment_details = get_supplier_data()
     supplier_bank_account_uid = []
-    for i in range(0, len(payment_details)):
-        supplier_bank_account_uid.append(
-            get_account_uid(payment_details.iat[i, 2], payment_details.iat[i, 3], payment_details.iat[i, 4]))
-    payment_details['supplier_bank_account_uid'] = supplier_bank_account_uid
     payee_client_id = []
     _ = [payee_client_id.append(i) for i in range(400, 400 + len(payment_details))]
+    for i in range(0, len(payment_details)):
+        supplier_bank_account_uid.append(
+            get_account_uid(payment_details.iat[i, 2], payment_details.iat[i, 3], payment_details.iat[i, 4],payee_client_id[i]))
+    payment_details['supplier_bank_account_uid'] = supplier_bank_account_uid
     payment_details['payee_client_id'] = payee_client_id
     payment_details.to_excel('resources/updated_sheet_with_supp_id.xlsx')
     payment_required_details = pd.DataFrame(payment_details[['Source Account(PL Card)', 'Payment Amount',
