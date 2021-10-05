@@ -1,1 +1,1 @@
-{"status":"FAILURE","errors":[{"code":"CPP_PPS_108","severity":"FATAL","message":"Validation errors :null"}]}
+{"status":"FAILURE","errors":[{"code":"CPP_PPS_110","severity":"FATAL","message":"Payer Details not found in the request."},{"code":"CPP_PPS_111","severity":"FATAL","message":"Payee Details not found in the request."}]}

@@ -1,3 +1,5 @@
+from datetime import datetime
+
 import pandas as pd
 import os
 import json
@@ -6,11 +8,12 @@ import pytest
 
 
 df = pd.DataFrame()
+count = 0
 
 
 def get_supplier_data():
     global df
-    df = pd.read_excel('resources/52Tests_Script_CentimeTesting_FCC.xlsx', header=1)
+    df = pd.read_excel('resources/52Tests_Script_CentimeTesting_FCC_PL_CARD.xlsx', header=1)
     supplier_details = df[
         ['Source Account(PL Card)', 'Payment Amount', 'Vendor Name (counter party)', 'Receiving Account Number',
          'Receiving Routing Number', 'Transaction Description']]
@@ -19,7 +22,7 @@ def get_supplier_data():
 
 
 def updated_config(vendor_name, account_number, routing_number,payee_client_id):
-    sample_curl = """curl --location --request POST 'https://internal.ds.services.stg.centime.com/payments-data-service/1.0/bank-accounts/' --header 'clientid: 1' --header 'loginid: admin@centime.com' --header 'Content-Type: application/json' --data-raw '{"clientId": "client_id",
+    sample_curl = """curl --location --request POST 'https://internal.ds.services.dev.centime.com/payments-data-service/1.0/bank-accounts/' --header 'clientid: 1' --header 'loginid: admin@centime.com' --header 'Content-Type: application/json' --data-raw '{"clientId": "client_id",
     "clientType": "SUPPLIER",
     "accountNumber": "account_number",
     "routingNumber": "routing_number",
@@ -44,6 +47,7 @@ def get_account_uid(vendor_name, account_number, routing_number,payee_client_id)
 
 
 def trigger_pay_api(source_account, amount, payee_uid, payee_cient_id, payment_description):
+    global count
     sample_dict = {
         "amount": "excel_amount",
         "currencyCode": "USD",
@@ -62,32 +66,37 @@ def trigger_pay_api(source_account, amount, payee_uid, payee_cient_id, payment_d
             "id": "payer_client_id"
         },
         "paymentDesc": "excel_payment_description",
-        "paymentStartDate": "2021-09-17 23:22:38"
+        "paymentStartDate": "date_time"
     }
-    curl_command = f"curl --location --request POST 'https://internal.fs.services.stg.centime.com/payments-processing" \
-                   f"-service/1.0/payments/pay/CENTIME_CREDIT?isDrawCash=false' --header 'clientid: 2' --header " \
+    curl_command = f"curl --location --request POST 'https://internal.fs.services.dev.centime.com/payments-processing" \
+                   f"-service/1.0/payments/pay/CENTIME_CREDIT?isDrawCash=false' --header 'clientid: client_id' --header " \
                    f"'loginid: admin@centime.com' --header 'Content-Type: application/json' --data-raw '" \
                    f"{json.dumps(sample_dict)}' "
     payer_client_id = {"4988 6562 0455 0401": "2",
                        "4988 6562 4617 0259": "3",
-                       "4988 6562 0671 6844 ": "3"}
+                       "4988 6562 0671 6844": "3",
+                       "4216 3873 4862 7715": "2"}
 
     payer_uid = {"4988 6562 0455 0401": "u2vfotBU",
                  "4988 6562 4617 0259": "Zrjo4NCk",
-                 "4988 6562 0671 6844 ": "Yyw6qwff"}
+                 "4988 6562 0671 6844": "Yyw6qwff",
+                 "4216 3873 4862 7715": "iLkbOHbQ"}
+
+    current_date_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
     updated_curl_command = curl_command.replace('excel_amount', str(amount)).replace('excel_payee_uid', str(payee_uid)). \
-        replace('excel_payee_id', str(payee_cient_id)).replace('excel_payer_uid', str(payer_uid[source_account])). \
-        replace('payer_client_id', str(payer_client_id[source_account])).replace('excel_payment_description',
-                                                                                 payment_description)
+        replace('excel_payee_id', str(payee_cient_id)).replace('excel_payer_uid', str(payer_uid[source_account.rstrip()])). \
+        replace('payer_client_id', str(payer_client_id[source_account.rstrip()])).replace('excel_payment_description',
+                                                                                 payment_description).replace('date_time',current_date_time).replace('client_id',str(payer_client_id[source_account.rstrip()]))
     with open('request_response.txt','a+') as file:
-        file.write(f"request: {updated_curl_command} \n")
+        file.write(f"Test Case#: {count} \n-----------")
+        file.write(f"\nrequest: {updated_curl_command} \n")
         file.close()
 
     response = os.system(f'{updated_curl_command} > result.json')
     response = json.load(open("result.json"))
     with open('request_response.txt','a+') as file:
-        file.write(f"request: {response} \n")
+        file.write(f"response: {response} \n")
         file.close()
     return response
 
@@ -96,7 +105,7 @@ def setup_supp_data():
     payment_details = get_supplier_data()
     supplier_bank_account_uid = []
     payee_client_id = []
-    _ = [payee_client_id.append(i) for i in range(400, 400 + len(payment_details))]
+    _ = [payee_client_id.append(i) for i in range(900, 900 + len(payment_details))]
     for i in range(0, len(payment_details)):
         supplier_bank_account_uid.append(
             get_account_uid(payment_details.iat[i, 2], payment_details.iat[i, 3], payment_details.iat[i, 4],payee_client_id[i]))
@@ -106,10 +115,10 @@ def setup_supp_data():
     payment_required_details = pd.DataFrame(payment_details[['Source Account(PL Card)', 'Payment Amount',
                                                              'supplier_bank_account_uid', 'payee_client_id',
                                                              'Transaction Description']])
-    payment_required_details.to_excel('resources/payment_required_details.xlsx')
+    payment_required_details.to_csv('resources/payment_required_details.csv')
 
 
-payment_required_details = pd.read_excel('resources/payment_required_details.xlsx', header=0)
+payment_required_details = pd.read_csv('resources/payment_required_details.csv', header=0)
 if 'Unnamed: 0' in payment_required_details.columns:
     del payment_required_details['Unnamed: 0']
 
@@ -117,5 +126,8 @@ if 'Unnamed: 0' in payment_required_details.columns:
 @pytest.mark.parametrize("source_account,amount,payee_uid,payee_client_id,payment_description",
                          payment_required_details.values.tolist())
 def test_api(source_account, amount, payee_uid, payee_client_id, payment_description):
-    response = trigger_pay_api(source_account, amount, payee_uid, payee_client_id, payment_description)
-    assert response['status'] == 'SUCCESS'
+    global count
+    if os.environ['insert_supp_data'] == 'no':
+        count = count+1
+        response = trigger_pay_api(source_account, amount, payee_uid, payee_client_id, payment_description)
+        assert response['status'] == 'SUCCESS'
